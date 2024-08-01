@@ -22,6 +22,8 @@ pub enum BenchType {
     Sha2,
     Sha3,
     Sha2Chain,
+    InnerProduct,
+    Conv1d,
 }
 
 #[allow(unreachable_patterns)] // good errors on new BenchTypes
@@ -38,6 +40,8 @@ pub fn benchmarks(
             BenchType::Sha3 => sha3::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::Sha2Chain => sha2chain::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::Fibonacci => fibonacci::<Fr, HyraxScheme<G1Projective>>(),
+            BenchType::InnerProduct => inner_product::<Fr, HyraxScheme<G1Projective>>(),
+            BenchType::Conv1d => conv_1d::<Fr, HyraxScheme<G1Projective>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::Zeromorph => match bench_type {
@@ -45,6 +49,8 @@ pub fn benchmarks(
             BenchType::Sha3 => sha3::<Fr, Zeromorph<Bn254>>(),
             BenchType::Sha2Chain => sha2chain::<Fr, Zeromorph<Bn254>>(),
             BenchType::Fibonacci => fibonacci::<Fr, Zeromorph<Bn254>>(),
+            BenchType::InnerProduct => inner_product::<Fr, Zeromorph<Bn254>>(),
+            BenchType::Conv1d => conv_1d::<Fr, Zeromorph<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::HyperKZG => match bench_type {
@@ -52,6 +58,8 @@ pub fn benchmarks(
             BenchType::Sha3 => sha3::<Fr, HyperKZG<Bn254>>(),
             BenchType::Sha2Chain => sha2chain::<Fr, HyperKZG<Bn254>>(),
             BenchType::Fibonacci => fibonacci::<Fr, HyperKZG<Bn254>>(),
+            BenchType::InnerProduct => inner_product::<Fr, HyperKZG<Bn254>>(),
+            BenchType::Conv1d => conv_1d::<Fr, HyperKZG<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         _ => panic!("PCS Type does not have a mapping"),
@@ -133,6 +141,84 @@ where
             &jolt_proof.instruction_lookups,
         );
 
+        let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
+        assert!(
+            verification_result.is_ok(),
+            "Verification failed with error: {:?}",
+            verification_result.err()
+        );
+    };
+
+    tasks.push((
+        tracing::info_span!("Example_E2E"),
+        Box::new(task) as Box<dyn FnOnce()>,
+    ));
+
+    tasks
+}
+
+fn inner_product<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
+where
+    F: JoltField,
+    PCS: CommitmentScheme<Field = F>,
+{
+    let mut tasks = Vec::new();
+    let mut program = host::Program::new("inner-product-guest");
+    program.set_input(&[20u8; 32]);
+    program.set_input(&[20u8; 32]);
+
+    let task = move || {
+        let (bytecode, memory_init) = program.decode();
+        let (io_device, trace, circuit_flags) = program.trace();
+
+        let preprocessing: crate::jolt::vm::JoltPreprocessing<F, PCS> =
+            RV32IJoltVM::preprocess(bytecode.clone(), memory_init, 1 << 20, 1 << 20, 1 << 22);
+
+        let (jolt_proof, jolt_commitments) = <RV32IJoltVM as Jolt<_, PCS, C, M>>::prove(
+            io_device,
+            trace,
+            circuit_flags,
+            preprocessing.clone(),
+        );
+        let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
+        assert!(
+            verification_result.is_ok(),
+            "Verification failed with error: {:?}",
+            verification_result.err()
+        );
+    };
+
+    tasks.push((
+        tracing::info_span!("Example_E2E"),
+        Box::new(task) as Box<dyn FnOnce()>,
+    ));
+
+    tasks
+}
+
+fn conv_1d<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
+where
+    F: JoltField,
+    PCS: CommitmentScheme<Field = F>,
+{
+    let mut tasks = Vec::new();
+    let mut program = host::Program::new("conv-1d-guest");
+    program.set_input(&[200; 32]);
+    program.set_input(&[4, 6, 8, 10, 12, 16]);
+
+    let task = move || {
+        let (bytecode, memory_init) = program.decode();
+        let (io_device, trace, circuit_flags) = program.trace();
+
+        let preprocessing: crate::jolt::vm::JoltPreprocessing<F, PCS> =
+            RV32IJoltVM::preprocess(bytecode.clone(), memory_init, 1 << 20, 1 << 20, 1 << 22);
+
+        let (jolt_proof, jolt_commitments) = <RV32IJoltVM as Jolt<_, PCS, C, M>>::prove(
+            io_device,
+            trace,
+            circuit_flags,
+            preprocessing.clone(),
+        );
         let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
         assert!(
             verification_result.is_ok(),

@@ -44,6 +44,10 @@ members = [
     "examples/alloc/guest",
     "examples/stdlib",
     "examples/stdlib/guest",
+    "examples/inner-product",
+    "examples/inner-product/guest",
+    "examples/convolution-1d",
+    "examples/convolution-1d/guest",
 ]
 
 [features]
