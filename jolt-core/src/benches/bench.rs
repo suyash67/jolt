@@ -1,5 +1,5 @@
 use crate::field::JoltField;
-use crate::host;
+use crate::host::{self, Program};
 use crate::jolt::vm::rv32i_vm::{RV32IJoltVM, C, M};
 use crate::jolt::vm::Jolt;
 use crate::poly::commitment::commitment_scheme::CommitmentScheme;
@@ -101,17 +101,14 @@ fn serialize_and_print_size(name: &str, item: &impl ark_serialize::CanonicalSeri
     println!("{:<30} : {:.3} MB", name, file_size_mb);
 }
 
-fn prove_example<T: Serialize, PCS, F>(
-    example_name: &str,
-    input: &T,
+fn generate_proof_and_verify<F, PCS>(
+    mut program: Program,
 ) -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
 where
     F: JoltField,
     PCS: CommitmentScheme<Field = F>,
 {
     let mut tasks = Vec::new();
-    let mut program = host::Program::new(example_name);
-    program.set_input(input);
 
     let task = move || {
         let (bytecode, memory_init) = program.decode();
@@ -157,43 +154,30 @@ where
     tasks
 }
 
+fn prove_example<T: Serialize, PCS, F>(
+    example_name: &str,
+    input: &T,
+) -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
+where
+    F: JoltField,
+    PCS: CommitmentScheme<Field = F>,
+{
+    let mut program = host::Program::new(example_name);
+    program.set_input(input);
+
+    generate_proof_and_verify::<F, PCS>(program)
+}
+
 fn inner_product<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
 where
     F: JoltField,
     PCS: CommitmentScheme<Field = F>,
 {
-    let mut tasks = Vec::new();
     let mut program = host::Program::new("inner-product-guest");
     program.set_input(&[20u8; 32]);
     program.set_input(&[20u8; 32]);
 
-    let task = move || {
-        let (bytecode, memory_init) = program.decode();
-        let (io_device, trace, circuit_flags) = program.trace();
-
-        let preprocessing: crate::jolt::vm::JoltPreprocessing<F, PCS> =
-            RV32IJoltVM::preprocess(bytecode.clone(), memory_init, 1 << 20, 1 << 20, 1 << 22);
-
-        let (jolt_proof, jolt_commitments) = <RV32IJoltVM as Jolt<_, PCS, C, M>>::prove(
-            io_device,
-            trace,
-            circuit_flags,
-            preprocessing.clone(),
-        );
-        let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
-        assert!(
-            verification_result.is_ok(),
-            "Verification failed with error: {:?}",
-            verification_result.err()
-        );
-    };
-
-    tasks.push((
-        tracing::info_span!("Example_E2E"),
-        Box::new(task) as Box<dyn FnOnce()>,
-    ));
-
-    tasks
+    generate_proof_and_verify::<F, PCS>(program)
 }
 
 fn conv_1d<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
@@ -201,38 +185,11 @@ where
     F: JoltField,
     PCS: CommitmentScheme<Field = F>,
 {
-    let mut tasks = Vec::new();
     let mut program = host::Program::new("conv-1d-guest");
     program.set_input(&[200; 32]);
     program.set_input(&[4, 6, 8, 10, 12, 16]);
 
-    let task = move || {
-        let (bytecode, memory_init) = program.decode();
-        let (io_device, trace, circuit_flags) = program.trace();
-
-        let preprocessing: crate::jolt::vm::JoltPreprocessing<F, PCS> =
-            RV32IJoltVM::preprocess(bytecode.clone(), memory_init, 1 << 20, 1 << 20, 1 << 22);
-
-        let (jolt_proof, jolt_commitments) = <RV32IJoltVM as Jolt<_, PCS, C, M>>::prove(
-            io_device,
-            trace,
-            circuit_flags,
-            preprocessing.clone(),
-        );
-        let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
-        assert!(
-            verification_result.is_ok(),
-            "Verification failed with error: {:?}",
-            verification_result.err()
-        );
-    };
-
-    tasks.push((
-        tracing::info_span!("Example_E2E"),
-        Box::new(task) as Box<dyn FnOnce()>,
-    ));
-
-    tasks
+    generate_proof_and_verify::<F, PCS>(program)
 }
 
 fn sha2chain<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
@@ -240,36 +197,9 @@ where
     F: JoltField,
     PCS: CommitmentScheme<Field = F>,
 {
-    let mut tasks = Vec::new();
     let mut program = host::Program::new("sha2-chain-guest");
     program.set_input(&[5u8; 32]);
     program.set_input(&1024u32);
 
-    let task = move || {
-        let (bytecode, memory_init) = program.decode();
-        let (io_device, trace, circuit_flags) = program.trace();
-
-        let preprocessing: crate::jolt::vm::JoltPreprocessing<F, PCS> =
-            RV32IJoltVM::preprocess(bytecode.clone(), memory_init, 1 << 20, 1 << 20, 1 << 22);
-
-        let (jolt_proof, jolt_commitments) = <RV32IJoltVM as Jolt<_, PCS, C, M>>::prove(
-            io_device,
-            trace,
-            circuit_flags,
-            preprocessing.clone(),
-        );
-        let verification_result = RV32IJoltVM::verify(preprocessing, jolt_proof, jolt_commitments);
-        assert!(
-            verification_result.is_ok(),
-            "Verification failed with error: {:?}",
-            verification_result.err()
-        );
-    };
-
-    tasks.push((
-        tracing::info_span!("Example_E2E"),
-        Box::new(task) as Box<dyn FnOnce()>,
-    ));
-
-    tasks
+    generate_proof_and_verify::<F, PCS>(program)
 }
