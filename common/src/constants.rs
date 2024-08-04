@@ -9,8 +9,8 @@ pub const MEMORY_OPS_PER_INSTRUCTION: usize = REG_OPS_PER_INSTRUCTION + RAM_OPS_
 
 pub const RAM_START_ADDRESS: u64 = 0x80000000;
 pub const DEFAULT_MEMORY_SIZE: u64 = 10 * 1024 * 1024;
-pub const DEFAULT_STACK_SIZE: u64 = 4096;
-pub const DEFAULT_MAX_INPUT_SIZE: u64 = 4096;
+pub const DEFAULT_STACK_SIZE: u64 = 262144 * 4;
+pub const DEFAULT_MAX_INPUT_SIZE: u64 = 262144 * 4;
 pub const DEFAULT_MAX_OUTPUT_SIZE: u64 = 4096;
 
 pub const fn memory_address_to_witness_index(address: u64, ram_witness_offset: u64) -> usize {

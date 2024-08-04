@@ -174,8 +174,10 @@ where
     PCS: CommitmentScheme<Field = F>,
 {
     let mut program = host::Program::new("inner-product-guest");
-    program.set_input(&[20u8; 32]);
-    program.set_input(&[20u8; 32]);
+    let input_a = vec![255u8; 32768];
+    let input_b = vec![254u8; 32768];
+    program.set_input(&input_a);
+    program.set_input(&input_b);
 
     generate_proof_and_verify::<F, PCS>(program)
 }
@@ -186,8 +188,10 @@ where
     PCS: CommitmentScheme<Field = F>,
 {
     let mut program = host::Program::new("conv-1d-guest");
-    program.set_input(&[200; 32]);
-    program.set_input(&[4, 6, 8, 10, 12, 16]);
+    let signal = vec![255u8; 1024];
+    let kernel = vec![31u8; 32];
+    program.set_input(&signal);
+    program.set_input(&kernel);
 
     generate_proof_and_verify::<F, PCS>(program)
 }
