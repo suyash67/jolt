@@ -24,6 +24,7 @@ pub enum BenchType {
     Sha2Chain,
     InnerProduct,
     Conv1d,
+    MixedConvIp,
 }
 
 #[allow(unreachable_patterns)] // good errors on new BenchTypes
@@ -42,6 +43,7 @@ pub fn benchmarks(
             BenchType::Fibonacci => fibonacci::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::InnerProduct => inner_product::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::Conv1d => conv_1d::<Fr, HyraxScheme<G1Projective>>(),
+            BenchType::MixedConvIp => mixed_conv_ip::<Fr, HyraxScheme<G1Projective>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::Zeromorph => match bench_type {
@@ -51,6 +53,7 @@ pub fn benchmarks(
             BenchType::Fibonacci => fibonacci::<Fr, Zeromorph<Bn254>>(),
             BenchType::InnerProduct => inner_product::<Fr, Zeromorph<Bn254>>(),
             BenchType::Conv1d => conv_1d::<Fr, Zeromorph<Bn254>>(),
+            BenchType::MixedConvIp => mixed_conv_ip::<Fr, Zeromorph<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::HyperKZG => match bench_type {
@@ -60,6 +63,7 @@ pub fn benchmarks(
             BenchType::Fibonacci => fibonacci::<Fr, HyperKZG<Bn254>>(),
             BenchType::InnerProduct => inner_product::<Fr, HyperKZG<Bn254>>(),
             BenchType::Conv1d => conv_1d::<Fr, HyperKZG<Bn254>>(),
+            BenchType::MixedConvIp => mixed_conv_ip::<Fr, HyperKZG<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         _ => panic!("PCS Type does not have a mapping"),
@@ -192,6 +196,24 @@ where
     let kernel = vec![31u8; 32];
     program.set_input(&signal);
     program.set_input(&kernel);
+
+    generate_proof_and_verify::<F, PCS>(program)
+}
+
+fn mixed_conv_ip<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
+where
+    F: JoltField,
+    PCS: CommitmentScheme<Field = F>,
+{
+    let mut program = host::Program::new("mixed-conv-ip-guest");
+    let signal_len = 1 << 11;
+    let kernel_len = 32;
+    let signal = vec![255u8; signal_len];
+    let kernel = vec![31u8; kernel_len];
+    let weights = vec![254u8; signal_len + kernel_len - 1];
+    program.set_input(&signal);
+    program.set_input(&kernel);
+    program.set_input(&weights);
 
     generate_proof_and_verify::<F, PCS>(program)
 }

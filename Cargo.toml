@@ -48,6 +48,8 @@ members = [
     "examples/inner-product/guest",
     "examples/convolution-1d",
     "examples/convolution-1d/guest",
+    "examples/mixed-conv-ip",
+    "examples/mixed-conv-ip/guest",
 ]
 
 [features]
