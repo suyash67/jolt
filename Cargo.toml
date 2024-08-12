@@ -50,6 +50,8 @@ members = [
     "examples/convolution-1d/guest",
     "examples/mixed-conv-ip",
     "examples/mixed-conv-ip/guest",
+    "examples/simple-cnn",
+    "examples/simple-cnn/guest",
 ]
 
 [features]

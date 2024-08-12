@@ -7,6 +7,7 @@ use crate::poly::commitment::hyperkzg::HyperKZG;
 use crate::poly::commitment::hyrax::HyraxScheme;
 use crate::poly::commitment::zeromorph::Zeromorph;
 use ark_bn254::{Bn254, Fr, G1Projective};
+use rand::Rng;
 use serde::Serialize;
 
 #[derive(Debug, Copy, Clone, clap::ValueEnum)]
@@ -25,6 +26,7 @@ pub enum BenchType {
     InnerProduct,
     Conv1d,
     MixedConvIp,
+    SimpleCNN,
 }
 
 #[allow(unreachable_patterns)] // good errors on new BenchTypes
@@ -44,6 +46,7 @@ pub fn benchmarks(
             BenchType::InnerProduct => inner_product::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::Conv1d => conv_1d::<Fr, HyraxScheme<G1Projective>>(),
             BenchType::MixedConvIp => mixed_conv_ip::<Fr, HyraxScheme<G1Projective>>(),
+            BenchType::SimpleCNN => simple_cnn::<Fr, HyraxScheme<G1Projective>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::Zeromorph => match bench_type {
@@ -54,6 +57,7 @@ pub fn benchmarks(
             BenchType::InnerProduct => inner_product::<Fr, Zeromorph<Bn254>>(),
             BenchType::Conv1d => conv_1d::<Fr, Zeromorph<Bn254>>(),
             BenchType::MixedConvIp => mixed_conv_ip::<Fr, Zeromorph<Bn254>>(),
+            BenchType::SimpleCNN => simple_cnn::<Fr, Zeromorph<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         PCSType::HyperKZG => match bench_type {
@@ -64,6 +68,7 @@ pub fn benchmarks(
             BenchType::InnerProduct => inner_product::<Fr, HyperKZG<Bn254>>(),
             BenchType::Conv1d => conv_1d::<Fr, HyperKZG<Bn254>>(),
             BenchType::MixedConvIp => mixed_conv_ip::<Fr, HyperKZG<Bn254>>(),
+            BenchType::SimpleCNN => simple_cnn::<Fr, HyperKZG<Bn254>>(),
             _ => panic!("BenchType does not have a mapping"),
         },
         _ => panic!("PCS Type does not have a mapping"),
@@ -214,6 +219,30 @@ where
     program.set_input(&signal);
     program.set_input(&kernel);
     program.set_input(&weights);
+
+    generate_proof_and_verify::<F, PCS>(program)
+}
+
+fn generate_random_bytes(len: usize) -> Vec<u8> {
+    let mut rng = rand::thread_rng(); // Create a random number generator
+    (0..len).map(|_| rng.gen()).collect() // Generate random numbers and collect them into a vector
+}
+
+fn simple_cnn<F, PCS>() -> Vec<(tracing::Span, Box<dyn FnOnce()>)>
+where
+    F: JoltField,
+    PCS: CommitmentScheme<Field = F>,
+{
+    let mut program = host::Program::new("simple-cnn-guest");
+    let signal_len = 256;
+    let kernel_len = 3;
+    let fc_output_len = 32;
+    let signal = generate_random_bytes(signal_len);
+    let kernel = generate_random_bytes(kernel_len);
+    let weights_fc = generate_random_bytes((signal_len - kernel_len + 1) * fc_output_len);
+    program.set_input(&signal);
+    program.set_input(&kernel);
+    program.set_input(&weights_fc);
 
     generate_proof_and_verify::<F, PCS>(program)
 }
