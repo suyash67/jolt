@@ -234,15 +234,15 @@ where
     PCS: CommitmentScheme<Field = F>,
 {
     let mut program = host::Program::new("simple-cnn-guest");
-    let signal_len = 256;
-    let kernel_len = 3;
-    let fc_output_len = 32;
+    let signal_len = 1024;
+    let conv_a_len = signal_len / 4;
+    let conv_b_len = signal_len / 8;
     let signal = generate_random_bytes(signal_len);
-    let kernel = generate_random_bytes(kernel_len);
-    let weights_fc = generate_random_bytes((signal_len - kernel_len + 1) * fc_output_len);
+    let weights_fc_a = generate_random_bytes(conv_a_len * signal_len);
+    let weights_fc_b = generate_random_bytes(conv_b_len * conv_a_len);
     program.set_input(&signal);
-    program.set_input(&kernel);
-    program.set_input(&weights_fc);
+    program.set_input(&weights_fc_a);
+    program.set_input(&weights_fc_b);
 
     generate_proof_and_verify::<F, PCS>(program)
 }
