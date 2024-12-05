@@ -44,6 +44,9 @@ where
         let mut r: Vec<F> = Vec::new();
         let mut cubic_polys: Vec<CompressedUniPoly<F>> = Vec::new();
 
+        // TODO(suyash): pre-compute for algorithms 3 and 4 on witness polynomials
+        // TODO(suyash): integrate eq polynomial optimisation as well.
+
         for _ in 0..num_rounds {
             #[cfg(test)]
             self.sumcheck_sanity_check(eq_poly, previous_claim);
@@ -104,6 +107,8 @@ impl<F: JoltField, ProofTranscript: Transcript> SumcheckInstanceProof<F, ProofTr
     {
         let mut r: Vec<F> = Vec::new();
         let mut compressed_polys: Vec<CompressedUniPoly<F>> = Vec::new();
+
+        // TODO(suyash): need precomputation here on the witness polynomials.
 
         for _round in 0..num_rounds {
             // Vector storing evaluations of combined polynomials g(x) = P_0(x) * ... P_{num_polys} (x)

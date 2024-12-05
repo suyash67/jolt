@@ -207,6 +207,8 @@ where
     ) -> BatchedGrandProductLayerProof<F, ProofTranscript> {
         let mut eq_poly = SplitEqPolynomial::new(r_grand_product);
 
+        // TODO(suyash): handle eq poly optimisation in the sumcheck
+
         let (sumcheck_proof, r_sumcheck, sumcheck_claims) =
             self.prove_sumcheck(claim, &mut eq_poly, transcript);
 
